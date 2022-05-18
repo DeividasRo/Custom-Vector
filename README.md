@@ -1,2 +1,4 @@
-# Custom-Vector
-Custom vector class.
+# Custom Vector Class
+## Sparto tyrimai
+
+## Pagrindinių funkcijų aprašymai

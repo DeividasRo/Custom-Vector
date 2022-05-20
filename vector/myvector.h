@@ -1,5 +1,6 @@
 #ifndef MYVECTOR_H
 #define MYVECTOR_H
+#include <stdexcept>
 #include <memory>
 
 template <class T>
@@ -12,8 +13,18 @@ public:
     Vector() { Create(); }
     explicit Vector(size_t n, const T &val = T{}) { Create(n, val); }
     Vector(std::initializer_list<T> v_list) { Create(v_list.begin(), v_list.end()); }
+    Vector(iterator begin, iterator end) { Create(begin, end); }
     // rule of 3
     Vector(const Vector &v) { Create(v.begin(), v.end()); }
+    Vector &operator=(const Vector &other)
+    {
+        if (&other != this)
+        {
+            Uncreate();
+            Create(other.begin(), other.end());
+        }
+        return *this;
+    }
     Vector &operator=(Vector &other)
     {
         if (&other == this)
@@ -26,12 +37,20 @@ public:
     }
     ~Vector() { Uncreate(); }
 
-    T &operator[](size_t i)
+    T &
+    operator[](size_t i)
     {
         if (i < 0 || i > size())
             throw std::out_of_range("Index out of range.");
         return data[i];
     }
+    const T &operator[](size_t i) const
+    {
+        if (i < 0 || i > size())
+            throw std::out_of_range("Index out of range.");
+        return data[i];
+    }
+    T &at(size_t pos) { return data[pos]; }
     T back() { return *(avail - 1); }
     T front() { return data[0]; }
 
@@ -65,11 +84,11 @@ public:
     const_iterator end() const { return avail; }
 
 private:
-    iterator data;  // pirmo el.
+    iterator data;  // ant pirmo el.
     iterator avail; // po paskutinio el.
     iterator limit; // po paskutines uzrezervuotos vietos
 
-    std::allocator<int> alloc;
+    std::allocator<T> alloc;
 
     void Create();
     void Create(size_t, const T &);
@@ -79,32 +98,15 @@ private:
     void Unchecked_append(const T &);
 };
 
-template <class ForwardIt, class UnaryPredicate>
-ForwardIt partition(ForwardIt first, ForwardIt last, UnaryPredicate p)
-{
-    if (first == last)
-        return first;
-
-    for (ForwardIt i = std::next(first); i != last; ++i)
-    {
-        if (p(*i))
-        {
-            std::iter_swap(i, first);
-            ++first;
-        }
-    }
-    return first;
-}
-
 // private funkcijos
 
-template <class T>
+template <typename T>
 void Vector<T>::Create()
 {
     data = avail = limit = nullptr;
 }
 
-template <class T>
+template <typename T>
 void Vector<T>::Create(size_t n, const T &val)
 {
     data = alloc.allocate(n);
@@ -112,27 +114,26 @@ void Vector<T>::Create(size_t n, const T &val)
     std::uninitialized_fill(data, limit, val);
 }
 
-template <class T>
+template <typename T>
 void Vector<T>::Create(const_iterator i, const_iterator j)
 {
     data = alloc.allocate(j - i);
     limit = avail = std::uninitialized_copy(i, j, data);
 }
 
-template <class T>
+template <typename T>
 void Vector<T>::Uncreate()
 {
     if (data)
     {
-        iterator it = avail;
-        while (it != data)
-            alloc.destroy(--it);
+        while (avail != data)
+            alloc.destroy(--avail);
         alloc.deallocate(data, limit - data);
     }
     data = limit = avail = nullptr;
 }
 
-template <class T>
+template <typename T>
 void Vector<T>::Grow()
 {
     size_t new_size = std::max(2 * (limit - data), ptrdiff_t(1));
@@ -145,7 +146,7 @@ void Vector<T>::Grow()
     limit = data + new_size;
 }
 
-template <class T>
+template <typename T>
 void Vector<T>::Unchecked_append(const T &value)
 {
     alloc.construct(avail++, value);
